@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Inventario Seguro & POS Móvil</title>
+  <!-- Librería para lectura de códigos de barras en celulares (EAN-13, EAN-8, UPC, Code128) -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-admin { background: #7c3aed; color: #fff; }
+    .badge-seller { background: #0284c7; color: #fff; }
+    .badge-danger { background: var(--danger); color: #fff; }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-size: 1.15rem;
+      margin-bottom: 12px;
+    }
+
+    p.hint {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      color: #fff;
+      background: var(--primary);
+      text-decoration: none;
+    }
+    .btn:active { opacity: 0.85; }
+    .btn-full { width: 100%; }
+    .btn-success { background: var(--success); }
+    .btn-warning { background: var(--warning); color: #111827; }
+    .btn-danger { background: var(--danger); }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 0.82rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0f172a;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    input:focus, select:focus {
+      outline: 2px solid var(--primary);
+      border-color: transparent;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .col {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    /* Escáner de cámara */
+    #scanner-box {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto 12px auto;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid var(--primary);
+      display: none;
+      background: #000;
+    }
+
+    .scanner-status {
+      text-align: center;
+      font-size: 0.85rem;
+      padding: 8px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      background: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      display: none;
+    }
+
+    /* Tablas responsivas */
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .total-banner {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid var(--success);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 14px 0;
+    }
+    .total-banner .amount {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #34d399;
+    }
+
+    /* Modal de confirmación obligatoria */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 200;
+    }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      max-width: 480px;
+      width: 100%;
+      padding: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .modal h3 {
+      margin-bottom: 10px;
+      font-size: 1.15rem;
+    }
+    .modal-summary {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .alert {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .alert-error {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid var(--danger);
+      color: #fca5a5;
+    }
+    .alert-success {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid var(--success);
+      color: #6ee7b7;
+    }
+
+    .lockdown-banner {
+      background: #7f1d1d;
+      color: #fecaca;
+      text-align: center;
+      padding: 10px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="lockdown-banner" class="lockdown-banner">
+    ⚠️ MODO BLOQUEO DE EMERGENCIA ACTIVO: Las cuentas de vendedores están pausadas por seguridad.
+  </div>
+
+  <header id="app-header" style="display:none;">
+    <div class="brand">
+      <span>📦 Inventario Seguro</span>
+      <span id="user-role-badge" class="badge"></span>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span id="user-email-label" style="font-size:0.8rem; color:var(--muted);"></span>
+      <button class="btn btn-outline btn-sm" onclick="logout()">Salir</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="global-alert" class="alert"></div>
+
+    <!-- PANTALLA DE ACCESO (SOLO GMAIL AUTORIZADO) -->
+    <div id="login-view" class="card" style="max-width:440px; margin:40px auto; display:none;">
+      <h2>🔐 Acceso Restringido con Gmail</h2>
+      <p class="hint">
+        Solo pueden acceder las cuentas Gmail autorizadas por la administradora. Ninguna clave ni credencial se guarda en el celular.
+      </p>
+
+      <a href="/api/auth/google" class="btn btn-full" style="margin-bottom:14px;">
+        🔵 Iniciar sesión con mi cuenta Google (Gmail)
+      </a>
+
+      <div id="demo-login-box" style="display:none; border-top:1px solid var(--border); padding-top:14px; margin-top:10px;">
+        <p class="hint" style="margin-bottom:8px;">
+          <strong>Modo de prueba local activo:</strong> Ingresa tu correo Gmail para probar el sistema localmente antes de subirlo a la nube:
+        </p>
+        <div class="form-group">
+          <input type="email" id="demo-email-input" placeholder="ejemplo@gmail.com" />
+        </div>
+        <button class="btn btn-outline btn-full" onclick="demoLogin()">Entrar en Modo Prueba Local</button>
+      </div>
+    </div>
+
+    <!-- APLICACIÓN PRINCIPAL -->
+    <div id="main-view" style="display:none;">
+
+      <!-- Navegación por pestañas -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-pos" onclick="switchTab('tab-pos')">🛒 Punto de Venta (Vender)</button>
+        <button class="tab-btn admin-only" data-tab="tab-admin-inv" onclick="switchTab('tab-admin-inv')">📥 Compras / Ajustar Stock</button>
+        <button class="tab-btn" data-tab="tab-catalog" onclick="switchTab('tab-catalog')">📋 Stock Actual</button>
+        <button class="tab-btn admin-only" data-tab="tab-history" onclick="switchTab('tab-history')">🕒 Historial por Fecha</button>
+        <button class="tab-btn admin-only" data-tab="tab-security" onclick="switchTab('tab-security')">🛡️ Cuentas y Celulares Robados</button>
+      </div>
+
+      <!-- ESCÁNER UNIVERSAL (CÁMARA CON DOBLE LECTURA + FOTO + CÓDIGO MANUAL PARA TODAS LAS CUENTAS) -->
+      <div class="card" id="shared-scanner-card">
+        <h2>📷 Lector de Código de Barras y Entrada Manual</h2>
+        <p class="hint">
+          Apunta con la cámara del celular (verifica el código con doble lectura de seguridad para evitar errores) o escribe los números del código manualmente.
+        </p>
+
+        <div id="scanner-status" class="scanner-status"></div>
+        <div id="scanner-box"></div>
+
+        <div class="row" style="margin-bottom:12px;">
+          <button id="btn-start-camera" class="btn col" onclick="startCameraScanner()">📷 Escanear con Cámara</button>
+          <button id="btn-stop-camera" class="btn btn-danger col" style="display:none;" onclick="stopCameraScanner()">⏹️ Detener Cámara</button>
+          <label class="btn btn-outline col" style="cursor:pointer; margin:0;">
+            🔍 Analizar Foto Cuidadosamente
+            <input type="file" id="photo-barcode-input" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoInput(event)" />
+          </label>
+        </div>
+
+        <div class="row">
+          <div class="col" style="flex:2;">
+            <input type="text" id="manual-barcode-input" inputmode="numeric" placeholder="Escribe o pega los números del código de barras..." />
+          </div>
+          <button class="btn btn-success" onclick="processBarcodeInput()">Usar Código</button>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 1: PUNTO DE VENTA (VENDEDORES Y ADMIN) -->
+      <div id="tab-pos" class="tab-section">
+        <div class="card">
+          <h2>🛒 Carrito de Venta Actual</h2>
+          <p class="hint">Cada vez que escanees o ingreses un código de barras, se verificará el producto y se calculará el precio total.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Producto</th>
+                  <th>Precio Unit.</th>
+                  <th>Cant.</th>
+                  <th>Subtotal</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="pos-cart-body">
+                <tr><td colspan="6" style="text-align:center; color:var(--muted);">Aún no hay productos en la venta. Escanea o escribe un código arriba.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="total-banner">
+            <span>TOTAL A COBRAR:</span>
+            <span class="amount" id="pos-grand-total">$0.00</span>
+          </div>
+
+          <div class="form-group">
+            <label>Nota opcional de la venta (cliente, método de pago, etc.)</label>
+            <input type="text" id="pos-notes" placeholder="Ej: Efectivo / Transferencia" />
+          </div>
+
+          <div class="row">
+            <button class="btn btn-outline" onclick="clearCart()">Vaciar Carrito</button>
+            <button class="btn btn-success col" onclick="requestSaleConfirmation()">✅ Revisar y Confirmar Venta</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 2: COMPRAS Y AJUSTES DE INVENTARIO (SOLO ADMIN) -->
+      <div id="tab-admin-inv" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>📥 Registrar Compra o Sumar/Restar Productos (Modo Administrador)</h2>
+          <p class="hint">
+            Escanea el código de barras o escribe sus números arriba. El sistema te preguntará el nombre del producto (o lo completará si ya existe) y te pedirá confirmar antes de impactar el inventario.
+          </p>
+
+          <div class="row">
+            <div class="form-group col">
+              <label>Tipo de Operación</label>
+              <select id="adm-op-type">
+                <option value="COMPRA">➕ Compra de Mercadería (Suma al Stock)</option>
+                <option value="AJUSTE_SUMA">➕ Ajuste Positivo (Sumar unidades)</option>
+                <option value="AJUSTE_RESTA">➖ Ajuste Negativo / Merma (Restar unidades)</option>
+              </select>
+            </div>
+            <div class="form-group col">
+              <label>Código de Barras</label>
+              <input type="text" id="adm-barcode" placeholder="Escanea o escribe el código" onchange="lookupProductForAdmin(this.value)" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Nombre del Producto (Obligatorio: verifica o escribe el nombre exacto)</label>
+            <input type="text" id="adm-name" placeholder="Ej: Leche Entera 1L / Arroz Grado 1" />
+          </div>
+
+          <div class="row">
+            <div class="form-group col">
+              <label>Cantidad de Unidades a Sumar/Restar</label>
+              <input type="number" id="adm-qty" min="1" step="1" value="1" />
+            </div>
+            <div class="form-group col">
+              <label>Precio de Costo Unitario ($)</label>
+              <input type="number" id="adm-cost" min="0" step="0.01" placeholder="0.00" />
+            </div>
+            <div class="form-group col">
+              <label>Precio de Venta al Público ($)</label>
+              <input type="number" id="adm-sale" min="0" step="0.01" placeholder="0.00" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Observación / Proveedor / Motivo</label>
+            <input type="text" id="adm-notes" placeholder="Ej: Factura Proveedor #104" />
+          </div>
+
+          <button class="btn btn-success btn-full" onclick="requestAdminInventoryConfirmation()">
+            ✅ Verificar y Guardar Movimiento de Inventario
+          </button>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 3: STOCK ACTUAL -->
+      <div id="tab-catalog" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>📋 Inventario de Productos</h2>
+          <div class="row" style="margin-bottom:12px;">
+            <input type="text" id="catalog-search" class="col" placeholder="Buscar por nombre o código de barras..." oninput="loadCatalog()" />
+            <button class="btn btn-outline" onclick="loadCatalog()">Actualizar</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Producto</th>
+                  <th>Precio Venta</th>
+                  <th>Stock Disponible</th>
+                </tr>
+              </thead>
+              <tbody id="catalog-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 4: HISTORIAL DE MOVIMIENTOS POR FECHA (SOLO ADMIN) -->
+      <div id="tab-history" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>🕒 Historial de Movimientos (Quién, Qué y Cuándo)</h2>
+          <p class="hint">Filtra por rango de fechas, correo Gmail del vendedor/administrador o tipo de operación.</p>
+
+          <div class="row" style="margin-bottom:12px;">
+            <div class="col">
+              <label>Desde Fecha</label>
+              <input type="date" id="hist-start" />
+            </div>
+            <div class="col">
+              <label>Hasta Fecha</label>
+              <input type="date" id="hist-end" />
+            </div>
+            <div class="col">
+              <label>Tipo</label>
+              <select id="hist-type">
+                <option value="">Todos</option>
+                <option value="VENTA">Ventas</option>
+                <option value="COMPRA">Compras</option>
+                <option value="AJUSTE_SUMA">Ajustes (+)</option>
+                <option value="AJUSTE_RESTA">Ajustes (-)</option>
+              </select>
+            </div>
+            <div class="col">
+              <label>Correo Gmail</label>
+              <input type="text" id="hist-email" placeholder="vendedor@gmail.com" />
+            </div>
+          </div>
+          <button class="btn btn-full" style="margin-bottom:14px;" onclick="loadMovements()">🔎 Consultar Movimientos</button>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha y Hora</th>
+                  <th>Usuario (Gmail)</th>
+                  <th>Operación</th>
+                  <th>Producto (Código)</th>
+                  <th>Cant.</th>
+                  <th>Total</th>
+                  <th>Stock (Antes → Después)</th>
+                </tr>
+              </thead>
+              <tbody id="history-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 5: SEGURIDAD, CUENTAS GMAIL Y CELULARES ROBADOS (SOLO ADMIN) -->
+      <div id="tab-security" class="tab-section" style="display:none;">
+        <div class="card" style="border-color: var(--danger);">
+          <h2>🚨 Bloqueo de Emergencia (Si roban el celular de la Administradora)</h2>
+          <p class="hint">
+            Si te roban o pierdes tu celular de administradora, entra desde cualquier otra computadora o teléfono con tu cuenta Gmail y presiona el botón de abajo. Esto <strong>cerrará al instante la sesión en el celular robado</strong> y bloqueará las ventas hasta que lo desactives.
+          </p>
+          <div class="row">
+            <button class="btn btn-danger col" onclick="toggleEmergencyLockdown(true)">
+              🔒 ACTIVAR BLOQUEO TOTAL Y EXPULSAR CELULARES
+            </button>
+            <button class="btn btn-outline col" onclick="toggleEmergencyLockdown(false)">
+              🔓 Desactivar Bloqueo de Emergencia
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>➕ Autorizar Nueva Cuenta Gmail (Vendedor o Administrador)</h2>
+          <div class="row">
+            <div class="form-group col">
+              <label>Correo Gmail</label>
+              <input type="email" id="new-user-email" placeholder="vendedora@gmail.com" />
+            </div>
+            <div class="form-group col">
+              <label>Nombre de la persona</label>
+              <input type="text" id="new-user-name" placeholder="Ej: María (Turno Mañana)" />
+            </div>
+            <div class="form-group col">
+              <label>Rol</label>
+              <select id="new-user-role">
+                <option value="seller">Vendedor (Solo Vender)</option>
+                <option value="admin">Administrador (Control Total)</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-success" onclick="addAuthorizedUser()">Autorizar Cuenta Gmail</button>
+        </div>
+
+        <div class="card">
+          <h2>📱 Cuentas Autorizadas y Revocación por Robo de Celular</h2>
+          <p class="hint">
+            Si a una vendedora le roban el celular, presiona <strong>"Bloquear Cuenta y Celular"</strong> para expulsarla en el acto sin que nadie pueda usar el teléfono robado.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre y Correo Gmail</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Celulares Conectados</th>
+                  <th>Acciones de Seguridad</th>
+                </tr>
+              </thead>
+              <tbody id="users-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMACIÓN OBLIGATORIA PARA TODAS LAS OPERACIONES -->
+  <div id="confirm-modal" class="modal-backdrop">
+    <div class="modal">
+      <h3 id="modal-title">¿Confirmas que esta operación es correcta?</h3>
+      <div id="modal-body" class="modal-summary"></div>
+      <div class="row">
+        <button class="btn btn-outline col" onclick="closeConfirmModal()">❌ Corregir</button>
+        <button id="modal-confirm-btn" class="btn btn-success col">✅ Sí, es correcta</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

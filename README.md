@@ -1,75 +1,67 @@
-# Sistema de Inventario y Punto de Venta Seguro con Lector de Códigos de Barras Móvil
+﻿# whatwg-url
 
-Este proyecto contiene una aplicación completa **Full-Stack (Node.js + Express + SQLite Transaccional)** diseñada para funcionar en celulares desde cualquier lugar con internet, sin exponer ninguna clave o secreto en el frontend.
+whatwg-url is a full implementation of the WHATWG [URL Standard](https://url.spec.whatwg.org/). It can be used standalone, but it also exposes a lot of the internal algorithms that are useful for integrating a URL parser into a project like [jsdom](https://github.com/tmpvar/jsdom).
 
-## Características Principales Implementadas
+## Current Status
 
-1. **Seguridad Total en Backend (Cero Claves en el Frontend)**:
-   - La autenticación con **Google OAuth 2.0** (`GOOGLE_CLIENT_SECRET`), la clave de sesión (`SESSION_SECRET`) y la llave opcional de análisis de imagen (`GEMINI_API_KEY`) viven **exclusivamente en el servidor** (`.env`).
-   - Las sesiones se guardan en una cookie `HttpOnly` firmada y cifrada en la base de datos (`sessions`), inaccesible desde JavaScript en el navegador.
-   - En **cada petición**, el backend verifica en tiempo real si la cuenta sigue activa y si la sesión de ese celular no fue revocada.
+whatwg-url is currently up to date with the URL spec up to commit [a62223](https://github.com/whatwg/url/commit/a622235308342c9adc7fc2fd1659ff059f7d5e2a).
 
-2. **Lector de Código de Barras en Celular con Doble Verificación + Entrada Manual**:
-   - **Cámara en vivo**: Lee códigos EAN-13, EAN-8, UPC y Code-128 exigiendo **doble lectura consecutiva coincidente** para evitar errores por desenfoque o movimiento.
-   - **Análisis cuidadoso de foto**: Permite tomar una foto nítida de la etiqueta para analizarla localmente o en el backend.
-   - **Entrada numérica manual**: Disponible en **todas las cuentas** (administrador y vendedores) para escribir o pegar los dígitos del código de barras cuando una etiqueta está dañada.
+## API
 
-3. **Confirmación Obligatoria en Cada Operación**:
-   - Al escanear o escribir un código, el sistema muestra o pregunta el **nombre del producto**, el precio y la cantidad, y abre un cuadro de confirmación obligatorio (`¿Confirmas que esta operación es correcta?`) tanto al agregar productos como antes de registrar cualquier **Compra**, **Ajuste (suma/resta)** o **Venta**.
+### The `URL` Constructor
 
-4. **Protección Antirrobo de Celulares (Vendedoras y Administradora)**:
-   - **Si le roban el celular a una vendedora**: La administradora entra a la pestaña **🛡️ Cuentas y Celulares Robados** y presiona **"🛑 Bloquear Cuenta y Celular"**. Esto desactiva su cuenta Gmail y destruye su sesión en el servidor al instante (el teléfono robado queda fuera en el próximo clic).
-   - **Si le roban el celular a la administradora**: La administradora inicia sesión con su cuenta Gmail desde cualquier otra computadora o teléfono y presiona **"🔒 ACTIVAR BLOQUEO TOTAL Y EXPULSAR CELULARES"**. Esto cierra todas las sesiones abiertas en todos los dispositivos (incluido el celular robado) y congela las ventas hasta que ella lo reactive. Also puede revocar accesos de la app desde [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
+The main API is the [`URL`](https://url.spec.whatwg.org/#url) export, which follows the spec's behavior in all ways (including e.g. `USVString` conversion). Most consumers of this library will want to use this.
 
----
+### Low-level URL Standard API
 
-## Cómo Ejecutarlo en tu Computadora
+The following methods are exported for use by places like jsdom that need to implement things like [`HTMLHyperlinkElementUtils`](https://html.spec.whatwg.org/#htmlhyperlinkelementutils). They operate on or return an "internal URL" or ["URL record"](https://url.spec.whatwg.org/#concept-url) type.
 
-1. Instala **Node.js LTS** (versión 18 o superior) desde [https://nodejs.org](https://nodejs.org).
-2. Abre una terminal en la carpeta del proyecto:
-   ```bash
-   cd C:\Users\user\.gemini\antigravity\scratch\inventario-seguro
-   npm install
-   ```
-3. Copia el archivo `.env.example` a `.env`:
-   ```bash
-   copy .env.example .env
-   ```
-   *(Para probar rápidamente en tu PC sin configurar Google Cloud aún, cambia `ALLOW_DEMO_LOGIN=true` en tu archivo `.env` y coloca tu correo en `ADMIN_EMAIL`).*
-4. Inicia el servidor:
-   ```bash
-   npm start
-   ```
-5. Abre `http://localhost:3000` en tu navegador.
+- [URL parser](https://url.spec.whatwg.org/#concept-url-parser): `parseURL(input, { baseURL, encodingOverride })`
+- [Basic URL parser](https://url.spec.whatwg.org/#concept-basic-url-parser): `basicURLParse(input, { baseURL, encodingOverride, url, stateOverride })`
+- [URL serializer](https://url.spec.whatwg.org/#concept-url-serializer): `serializeURL(urlRecord, excludeFragment)`
+- [Host serializer](https://url.spec.whatwg.org/#concept-host-serializer): `serializeHost(hostFromURLRecord)`
+- [Serialize an integer](https://url.spec.whatwg.org/#serialize-an-integer): `serializeInteger(number)`
+- [Origin](https://url.spec.whatwg.org/#concept-url-origin) [serializer](https://html.spec.whatwg.org/multipage/browsers.html#serialization-of-an-origin): `serializeURLOrigin(urlRecord)`
+- [Set the username](https://url.spec.whatwg.org/#set-the-username): `setTheUsername(urlRecord, usernameString)`
+- [Set the password](https://url.spec.whatwg.org/#set-the-password): `setThePassword(urlRecord, passwordString)`
+- [Cannot have a username/password/port](https://url.spec.whatwg.org/#cannot-have-a-username-password-port): `cannotHaveAUsernamePasswordPort(urlRecord)`
 
----
+The `stateOverride` parameter is one of the following strings:
 
-## Cómo Configurar el Inicio de Sesión con Gmail (Google Cloud Gratis)
+- [`"scheme start"`](https://url.spec.whatwg.org/#scheme-start-state)
+- [`"scheme"`](https://url.spec.whatwg.org/#scheme-state)
+- [`"no scheme"`](https://url.spec.whatwg.org/#no-scheme-state)
+- [`"special relative or authority"`](https://url.spec.whatwg.org/#special-relative-or-authority-state)
+- [`"path or authority"`](https://url.spec.whatwg.org/#path-or-authority-state)
+- [`"relative"`](https://url.spec.whatwg.org/#relative-state)
+- [`"relative slash"`](https://url.spec.whatwg.org/#relative-slash-state)
+- [`"special authority slashes"`](https://url.spec.whatwg.org/#special-authority-slashes-state)
+- [`"special authority ignore slashes"`](https://url.spec.whatwg.org/#special-authority-ignore-slashes-state)
+- [`"authority"`](https://url.spec.whatwg.org/#authority-state)
+- [`"host"`](https://url.spec.whatwg.org/#host-state)
+- [`"hostname"`](https://url.spec.whatwg.org/#hostname-state)
+- [`"port"`](https://url.spec.whatwg.org/#port-state)
+- [`"file"`](https://url.spec.whatwg.org/#file-state)
+- [`"file slash"`](https://url.spec.whatwg.org/#file-slash-state)
+- [`"file host"`](https://url.spec.whatwg.org/#file-host-state)
+- [`"path start"`](https://url.spec.whatwg.org/#path-start-state)
+- [`"path"`](https://url.spec.whatwg.org/#path-state)
+- [`"cannot-be-a-base-URL path"`](https://url.spec.whatwg.org/#cannot-be-a-base-url-path-state)
+- [`"query"`](https://url.spec.whatwg.org/#query-state)
+- [`"fragment"`](https://url.spec.whatwg.org/#fragment-state)
 
-1. Entra a [Google Cloud Console](https://console.cloud.google.com/).
-2. Crea un proyecto nuevo y ve a **APIs y servicios > Pantalla de consentimiento de OAuth** (elige *Externo*, coloca el nombre de tu negocio y tu correo).
-3. Ve a **Credenciales > Crear credenciales > ID de cliente de OAuth**:
-   - Tipo de aplicación: **Aplicación web**.
-   - En **URI de redireccionamiento autorizados**, agrega:
-     - Para pruebas locales: `http://localhost:3000/api/auth/google/callback`
-     - Cuando lo subas a la nube: `https://tu-dominio-en-la-nube.com/api/auth/google/callback`
-4. Copia el **Client ID** y el **Client Secret** en las variables de entorno del servidor (`GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`) y asegúrate de dejar `ALLOW_DEMO_LOGIN=false`.
+The URL record type has the following API:
 
----
+- [`scheme`](https://url.spec.whatwg.org/#concept-url-scheme)
+- [`username`](https://url.spec.whatwg.org/#concept-url-username)
+- [`password`](https://url.spec.whatwg.org/#concept-url-password)
+- [`host`](https://url.spec.whatwg.org/#concept-url-host)
+- [`port`](https://url.spec.whatwg.org/#concept-url-port)
+- [`path`](https://url.spec.whatwg.org/#concept-url-path) (as an array)
+- [`query`](https://url.spec.whatwg.org/#concept-url-query)
+- [`fragment`](https://url.spec.whatwg.org/#concept-url-fragment)
+- [`cannotBeABaseURL`](https://url.spec.whatwg.org/#url-cannot-be-a-base-url-flag) (as a boolean)
 
-## Cómo Alojarlo en la Nube Gratis / Económico (con HTTPS para la Cámara del Celular)
+These properties should be treated with care, as in general changing them will cause the URL record to be in an inconsistent state until the appropriate invocation of `basicURLParse` is used to fix it up. You can see examples of this in the URL Standard, where there are many step sequences like "4. Set context object’s url’s fragment to the empty string. 5. Basic URL parse _input_ with context object’s url as _url_ and fragment state as _state override_." In between those two steps, a URL record is in an unusable state.
 
-> **Importante**: Los navegadores de celulares (Chrome en Android y Safari en iPhone) exigen que la página tenga **HTTPS** (candado seguro) para permitir abrir la cámara lectora de códigos de barras desde internet.
-
-Opciones recomendadas que incluyen **HTTPS automático gratis** y variables de entorno privadas en el backend:
-
-1. **Render.com** (Web Service con Node.js) o **Railway.app** / **Fly.io**:
-   - Conectas tu repositorio de GitHub (sin subir el archivo `.env`).
-   - En el panel de *Environment Variables* de Render/Railway, cargas:
-     - `ADMIN_EMAIL` = tu correo Gmail
-     - `SESSION_SECRET` = una frase larga aleatoria
-     - `GOOGLE_CLIENT_ID` = tu ID de cliente de Google
-     - `GOOGLE_CLIENT_SECRET` = tu secreto de Google
-     - `GOOGLE_REDIRECT_URI` = `https://tu-app.onrender.com/api/auth/google/callback`
-     - `ALLOW_DEMO_LOGIN` = `false`
-   - Para que el archivo `inventory.db` de SQLite se conserve al reiniciar en la nube, monta un volumen persistente (*Persistent Disk*) en la ruta del proyecto, o usa Railway/Fly.io con volumen de 1 GB.
+The return value of "failure" in the spec is represented by the string `"failure"`. That is, functions like `parseURL` and `basicURLParse` can return _either_ a URL record _or_ the string `"failure"`.

@@ -1,21 +1,32 @@
 {
-  "name": "inventario-seguro",
-  "version": "1.1.0",
-  "description": "Sistema de Inventario y Punto de Venta Seguro con Lector de Códigos de Barras, Google OAuth 2.0 y Base de Datos 100% JavaScript (Sin C++ / node-gyp)",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
-  },
+  "name": "whatwg-url",
+  "version": "5.0.0",
+  "description": "An implementation of the WHATWG URL Standard's URL API and parsing machinery",
+  "main": "lib/public-api.js",
+  "files": [
+    "lib/"
+  ],
+  "author": "Sebastian Mayr <github@smayr.name>",
+  "license": "MIT",
+  "repository": "jsdom/whatwg-url",
   "dependencies": {
-    "cookie-parser": "^1.4.7",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "express-rate-limit": "^7.4.1",
-    "google-auth-library": "^9.14.2",
-    "helmet": "^8.0.0"
+    "tr46": "~0.0.3",
+    "webidl-conversions": "^3.0.0"
   },
-  "engines": {
-    "node": ">=18.0.0"
+  "devDependencies": {
+    "eslint": "^2.6.0",
+    "istanbul": "~0.4.3",
+    "mocha": "^2.2.4",
+    "recast": "~0.10.29",
+    "request": "^2.55.0",
+    "webidl2js": "^3.0.2"
+  },
+  "scripts": {
+    "build": "node scripts/transform.js && node scripts/convert-idl.js",
+    "coverage": "istanbul cover node_modules/mocha/bin/_mocha",
+    "lint": "eslint .",
+    "prepublish": "npm run build",
+    "pretest": "node scripts/get-latest-platform-tests.js && npm run build",
+    "test": "mocha"
   }
 }
