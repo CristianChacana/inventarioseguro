@@ -1,0 +1,14 @@
+{
+  "counters": {
+    "users": 0,
+    "products": 0,
+    "movements": 0
+  },
+  "users": [],
+  "sessions": [],
+  "products": [],
+  "movements": [],
+  "system_state": {
+    "emergency_lockdown": "0"
+  }
+}
